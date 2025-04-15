@@ -1,4 +1,4 @@
-using System.Collections;
+﻿using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.InputSystem;
@@ -7,7 +7,8 @@ using UnityEngine.InputSystem;
 public class PlayerMovement : MonoBehaviour
 {
     [Header("References")]
-    public Transform cameraTransform; // Assign the main camera here
+    public Transform cameraTransform;
+    public Transform vaultPole;  // Assign in inspector
 
     private PlayerControls controls;
     private Rigidbody rb;
@@ -15,30 +16,39 @@ public class PlayerMovement : MonoBehaviour
     private Vector2 moveInput;
     private Vector2 lookInput;
 
+    private Vector3 loc; // Local position of pole
+
     [Header("Movement Settings")]
     public float moveSpeed = 5f;
     public float rotationSmoothTime = 0.1f;
     private float rotationVelocity;
 
     [Header("Camera Settings")]
-    public float cameraDistance = 6f;         // How far the camera is from the player
-    public float cameraHeight = 0.5f;         // Vertical offset of the camera from target position
-    public float lookSensitivity = 1f;      // Mouse sensitivity
-    public float minPitch = -40f;             // Min vertical angle
-    public float maxPitch = 80f;              // Max vertical angle
+    public float cameraDistance = 6f;
+    public float cameraHeight = 0.5f;
+    public float lookSensitivity = 1f;
+    public float minPitch = -40f;
+    public float maxPitch = 80f;
 
-    private float yaw = 0f;                   // Horizontal angle (around Y)
-    private float pitch = 0f;                 // Vertical angle (up/down)
+    private float yaw = 0f;
+    private float pitch = 0f;
+
+    [Header("Vault Settings")]
+    public float maxVaultForce = 15f;
+    public float vaultChargeRate = 20f;
+    public float vaultCooldown = 0.5f;
+
+    private float currentVaultForce = 0f;
+    private bool isChargingVault = false;
+    private bool canVault = true;
+    private bool isGrounded = true;
 
     private void Awake()
     {
         controls = new PlayerControls();
         rb = GetComponent<Rigidbody>();
-
-        // Prevent player from tipping over
         rb.freezeRotation = true;
 
-        // Lock cursor for better camera control (optional)
         Cursor.lockState = CursorLockMode.Locked;
         Cursor.visible = false;
     }
@@ -52,6 +62,9 @@ public class PlayerMovement : MonoBehaviour
 
         controls.Land.Look.performed += ctx => lookInput = ctx.ReadValue<Vector2>();
         controls.Land.Look.canceled += ctx => lookInput = Vector2.zero;
+
+        controls.Land.Vault.started += ctx => StartVaultCharge();
+        controls.Land.Vault.canceled += ctx => ReleaseVault();
     }
 
     private void OnDisable()
@@ -63,21 +76,26 @@ public class PlayerMovement : MonoBehaviour
     {
         UpdateCameraRotation();
         UpdateCameraPosition();
+
+        if (isChargingVault)
+        {
+            currentVaultForce += vaultChargeRate * Time.deltaTime;
+            currentVaultForce = Mathf.Clamp(currentVaultForce, 0f, maxVaultForce);
+        }
     }
 
     private void FixedUpdate()
     {
         HandleMovement();
+        CheckGrounded();
     }
 
     private void HandleMovement()
     {
         if (moveInput.sqrMagnitude < 0.01f) return;
 
-        // Get movement direction relative to camera yaw
         Vector3 forward = cameraTransform.forward;
         Vector3 right = cameraTransform.right;
-
         forward.y = 0f;
         right.y = 0f;
         forward.Normalize();
@@ -86,7 +104,6 @@ public class PlayerMovement : MonoBehaviour
         Vector3 moveDirection = forward * moveInput.y + right * moveInput.x;
         moveDirection.Normalize();
 
-        // Rotate player toward movement direction
         if (moveDirection != Vector3.zero)
         {
             float targetAngle = Mathf.Atan2(moveDirection.x, moveDirection.z) * Mathf.Rad2Deg;
@@ -94,30 +111,99 @@ public class PlayerMovement : MonoBehaviour
             transform.rotation = Quaternion.Euler(0f, smoothAngle, 0f);
         }
 
-        // Apply velocity to Rigidbody
         Vector3 velocity = moveDirection * moveSpeed;
         velocity.y = rb.velocity.y;
         rb.velocity = velocity;
     }
 
+    private void StartVaultCharge()
+    {
+        //if (!isGrounded || !canVault) return;
+        Debug.Log("RIGHT CLICK STARTED");
+        isChargingVault = true;
+        currentVaultForce = 0f;
+    }
+
+    private void ReleaseVault()
+    {
+        //if (!isChargingVault || !isGrounded || !canVault) return;
+        Debug.Log("RIGHT CLICK RELEASED");
+
+        isChargingVault = false;
+        Vault(currentVaultForce);
+        currentVaultForce = 0f;
+        StartCoroutine(ResetVaultCooldown());
+    }
+
+    private void Vault(float vaultForce)
+    {
+        if (vaultPole == null) return;
+
+        // Plant pole in front of frog
+        Vector3 plantPosition = transform.position + transform.forward * 1f + Vector3.down * 0.5f;
+        vaultPole.position = plantPosition;
+        vaultPole.rotation = Quaternion.LookRotation(-transform.forward + Vector3.up);
+
+        // Launch the frog
+        Vector3 vaultDirection = (transform.forward * 0.5f + Vector3.up * 1.2f).normalized;
+        rb.velocity = Vector3.zero;
+        rb.AddForce(vaultDirection * vaultForce, ForceMode.Impulse);
+
+        isGrounded = false;
+
+        StartCoroutine(SimulatePoleRotation());
+    }
+
+    private IEnumerator SimulatePoleRotation()
+    {
+        float duration = 0.4f;
+        float elapsed = 0f;
+
+        Quaternion startRot = vaultPole.rotation;
+        Quaternion endRot = Quaternion.Euler(vaultPole.eulerAngles + new Vector3(-80f, 0f, 0f));
+
+        while (elapsed < duration)
+        {
+            float t = elapsed / duration;
+            vaultPole.rotation = Quaternion.Slerp(startRot, endRot, t);
+            elapsed += Time.deltaTime;
+            yield return null;
+        }
+
+        loc = new Vector3(0.27f, 0.52f, -1.28f); // Pole coordinates
+
+        vaultPole.localPosition = loc;
+        vaultPole.localRotation = Quaternion.identity;
+    }
+
+    private IEnumerator ResetVaultCooldown()
+    {
+        canVault = false;
+        yield return new WaitForSeconds(vaultCooldown);
+        canVault = true;
+    }
+
+    private void CheckGrounded()
+    {
+        Ray ray = new Ray(transform.position + Vector3.up * 0.1f, Vector3.down);
+        isGrounded = Physics.Raycast(ray, 0.6f);
+
+        Debug.DrawRay(ray.origin, ray.direction * 0.2f, isGrounded ? Color.green : Color.red); //debug ray
+    }
+
     private void UpdateCameraRotation()
     {
-        // Accumulate yaw/pitch with sensitivity
         yaw += lookInput.x;
         pitch -= lookInput.y;
-
-        // Clamp vertical look (optional to prevent flipping)
         pitch = Mathf.Clamp(pitch, minPitch, maxPitch);
     }
 
     private void UpdateCameraPosition()
     {
-        // Calculate camera offset using pitch and yaw
         Quaternion rotation = Quaternion.Euler(pitch, yaw, 0f);
         Vector3 offset = rotation * new Vector3(0f, 0f, -cameraDistance);
-
-        // Final camera position and look
         Vector3 targetPosition = transform.position + Vector3.up * cameraHeight;
+
         cameraTransform.position = targetPosition + offset;
         cameraTransform.LookAt(targetPosition);
     }
