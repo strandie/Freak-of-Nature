@@ -69427,7 +69427,7 @@ MonoBehaviour:
   maxVaultForce: 15
   vaultChargeRate: 20
   vaultCooldown: 0.5
-  vaultChargeSlider: {fileID: 1718475495}
+  vaultChargeSlider: {fileID: 0}
   fireballPrefab: {fileID: 2219936606124536043, guid: 1fa281bc5ee932543a8e5c3e2dcd4d0c, type: 3}
   firePoint: {fileID: 966930470}
   fireballSpeed: 20
