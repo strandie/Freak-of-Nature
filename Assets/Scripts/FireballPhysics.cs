@@ -20,6 +20,13 @@ public class FireballPhysics : MonoBehaviour
             Instantiate(hitEffectPrefab, transform.position, Quaternion.identity);
         }
 
+        // Try to find a LampGlow component in the collided object's parents
+        LampGlow lamp = collision.gameObject.GetComponentInParent<LampGlow>();
+        if (lamp != null)
+        {
+            lamp.Glow();
+        }
+
         // Destroy the fireball
         Destroy(gameObject);
     }
