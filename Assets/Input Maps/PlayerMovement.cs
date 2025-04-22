@@ -33,6 +33,7 @@ public class PlayerMovement : MonoBehaviour
 
     private float yaw = 0f;
     private float pitch = 0f;
+    public float minCameraDistance = 1f;
 
     [Header("Vault Settings")]
     public float maxVaultForce = 15f;
@@ -48,6 +49,12 @@ public class PlayerMovement : MonoBehaviour
 
     [Header("UI")]
     public Slider vaultChargeSlider;
+
+    [Header("Shooting Settings")]
+    public GameObject fireballPrefab;
+    public Transform firePoint;
+    public float fireballSpeed = 20f;
+
 
     private void Awake()
     {
@@ -71,6 +78,10 @@ public class PlayerMovement : MonoBehaviour
 
         controls.Land.Vault.started += ctx => StartVaultCharge();
         controls.Land.Vault.canceled += ctx => ReleaseVault();
+
+        //Shoot fireball
+        controls.Land.Shoot.performed += ctx => ShootFireball();
+
     }
 
     private void OnDisable()
@@ -241,10 +252,49 @@ public class PlayerMovement : MonoBehaviour
     private void UpdateCameraPosition()
     {
         Quaternion rotation = Quaternion.Euler(pitch, yaw, 0f);
-        Vector3 offset = rotation * new Vector3(0f, 0f, -cameraDistance);
         Vector3 targetPosition = transform.position + Vector3.up * cameraHeight;
 
-        cameraTransform.position = targetPosition + offset;
+        // Desired camera position
+        Vector3 desiredCameraPos = targetPosition + rotation * new Vector3(0f, 0f, -cameraDistance);
+
+        // Raycast from target to desired camera position
+        Ray ray = new Ray(targetPosition, desiredCameraPos - targetPosition);
+        float adjustedDistance = cameraDistance;
+
+        if (Physics.Raycast(ray, out RaycastHit hit, cameraDistance))
+        {
+            adjustedDistance = Mathf.Clamp(hit.distance - 0.1f, minCameraDistance, cameraDistance);
+        }
+
+        // Make sure camera doesn't go inside the frog
+        Vector3 adjustedCameraPos = targetPosition + rotation * new Vector3(0f, 0f, -adjustedDistance);
+        //cameraTransform.position = adjustedCameraPos;
+        cameraTransform.position = Vector3.Lerp(cameraTransform.position, adjustedCameraPos, Time.deltaTime * 10f);
+
         cameraTransform.LookAt(targetPosition);
+        
+
     }
+
+
+    private void ShootFireball()
+    {
+        if (fireballPrefab == null || firePoint == null || cameraTransform == null) return;
+
+        // Shoot straight forward from camera's look direction
+        Vector3 direction = cameraTransform.forward;
+
+        GameObject fireball = Instantiate(fireballPrefab, firePoint.position, Quaternion.LookRotation(direction));
+
+        Rigidbody fireballRb = fireball.GetComponent<Rigidbody>();
+        if (fireballRb != null)
+        {
+            fireballRb.velocity = direction * fireballSpeed;
+        }
+    }
+
+
+
 }
+
+
