@@ -281,9 +281,7 @@ public class PlayerMovement : MonoBehaviour
     {
         if (fireballPrefab == null || firePoint == null || cameraTransform == null) return;
 
-        // Shoot straight forward from camera's look direction
         Vector3 direction = cameraTransform.forward;
-
         GameObject fireball = Instantiate(fireballPrefab, firePoint.position, Quaternion.LookRotation(direction));
 
         Rigidbody fireballRb = fireball.GetComponent<Rigidbody>();
@@ -291,7 +289,11 @@ public class PlayerMovement : MonoBehaviour
         {
             fireballRb.velocity = direction * fireballSpeed;
         }
+
+       
     }
+
+    
 
 
 

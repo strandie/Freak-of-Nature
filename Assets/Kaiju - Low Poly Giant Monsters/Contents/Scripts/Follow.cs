@@ -38,5 +38,16 @@ namespace DistantLands
                 }
 
         }
+        private void OnCollisionEnter(Collision collision)
+        {
+            if (collision.gameObject.CompareTag("Player"))
+            {
+                Health playerHealth = collision.gameObject.GetComponent<Health>();
+                if (playerHealth != null)
+                {
+                    playerHealth.TakeDamage(10f);
+                }
+            }
+        }
     }
 }

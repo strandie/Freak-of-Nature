@@ -6,12 +6,20 @@ public class FireballPhysics : MonoBehaviour
 {
     public GameObject hitEffectPrefab; // optional: for particle effect
     public float lifeTime = 3f;
-
+    public float damage = 20f;
     private void Start()
     {
         Destroy(gameObject, lifeTime);
     }
-
+    private void OnTriggerEnter(Collider other)
+    {
+        Health targetHealth = other.GetComponent<Health>();
+        if (targetHealth != null && other.CompareTag("Enemy"))
+        {
+            targetHealth.TakeDamage(damage);
+            Destroy(gameObject); // Fireball disappears on impact
+        }
+    }
     private void OnCollisionEnter(Collision collision)
     {
         // Optional: spawn hit particles
@@ -26,7 +34,7 @@ public class FireballPhysics : MonoBehaviour
         {
             lamp.Glow();
         }
-
+    
         // Destroy the fireball
         Destroy(gameObject);
     }
