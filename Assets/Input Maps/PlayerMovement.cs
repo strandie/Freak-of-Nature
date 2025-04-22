@@ -2,13 +2,14 @@
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.InputSystem;
+using UnityEngine.UI;
 
 [RequireComponent(typeof(Rigidbody))]
 public class PlayerMovement : MonoBehaviour
 {
     [Header("References")]
     public Transform cameraTransform;
-    public Transform vaultPole;  // Assign in inspector
+    public Transform vaultPole;
 
     private PlayerControls controls;
     private Rigidbody rb;
@@ -16,7 +17,7 @@ public class PlayerMovement : MonoBehaviour
     private Vector2 moveInput;
     private Vector2 lookInput;
 
-    private Vector3 loc; // Local position of pole
+    private Vector3 loc;
 
     [Header("Movement Settings")]
     public float moveSpeed = 5f;
@@ -42,6 +43,11 @@ public class PlayerMovement : MonoBehaviour
     private bool isChargingVault = false;
     private bool canVault = true;
     private bool isGrounded = true;
+
+    private int groundContactCount = 0;
+
+    [Header("UI")]
+    public Slider vaultChargeSlider;
 
     private void Awake()
     {
@@ -81,13 +87,24 @@ public class PlayerMovement : MonoBehaviour
         {
             currentVaultForce += vaultChargeRate * Time.deltaTime;
             currentVaultForce = Mathf.Clamp(currentVaultForce, 0f, maxVaultForce);
+
+            if (vaultChargeSlider != null)
+            {
+                vaultChargeSlider.value = currentVaultForce;
+
+                float t = currentVaultForce / maxVaultForce;
+                Color fillColor = Color.Lerp(Color.green, Color.red, t);
+
+                Image fillImage = vaultChargeSlider.fillRect.GetComponent<Image>();
+                if (fillImage != null)
+                    fillImage.color = fillColor;
+            }
         }
     }
 
     private void FixedUpdate()
     {
         HandleMovement();
-        CheckGrounded();
     }
 
     private void HandleMovement()
@@ -118,40 +135,72 @@ public class PlayerMovement : MonoBehaviour
 
     private void StartVaultCharge()
     {
-        //if (!isGrounded || !canVault) return;
-        Debug.Log("RIGHT CLICK STARTED");
+        if (!isGrounded || !canVault) return;
+
         isChargingVault = true;
         currentVaultForce = 0f;
+
+        if (vaultChargeSlider != null)
+            vaultChargeSlider.gameObject.SetActive(true);
     }
 
     private void ReleaseVault()
     {
-        //if (!isChargingVault || !isGrounded || !canVault) return;
-        Debug.Log("RIGHT CLICK RELEASED");
+        if (!isChargingVault) return;
 
         isChargingVault = false;
         Vault(currentVaultForce);
         currentVaultForce = 0f;
         StartCoroutine(ResetVaultCooldown());
+
+        if (vaultChargeSlider != null)
+        {
+            vaultChargeSlider.value = 0f;
+            vaultChargeSlider.gameObject.SetActive(false);
+        }
+    }
+
+    private void OnCollisionEnter(Collision collision)
+    {
+        if (collision.gameObject.CompareTag("Ground"))
+        {
+            groundContactCount++;
+            isGrounded = true;
+        }
+    }
+
+    private void OnCollisionExit(Collision collision)
+    {
+        if (collision.gameObject.CompareTag("Ground"))
+        {
+            groundContactCount = Mathf.Max(groundContactCount - 1, 0);
+            if (groundContactCount == 0)
+                isGrounded = false;
+        }
     }
 
     private void Vault(float vaultForce)
     {
         if (vaultPole == null) return;
 
-        // Plant pole in front of frog
-        Vector3 plantPosition = transform.position + transform.forward * 1f + Vector3.down * 0.5f;
-        vaultPole.position = plantPosition;
-        vaultPole.rotation = Quaternion.LookRotation(-transform.forward + Vector3.up);
+        try
+        {
+            Vector3 plantPosition = transform.position + transform.forward * 1f + Vector3.down * 0.5f;
+            vaultPole.position = plantPosition;
+            vaultPole.rotation = Quaternion.LookRotation(-transform.forward + Vector3.up);
 
-        // Launch the frog
-        Vector3 vaultDirection = (transform.forward * 0.5f + Vector3.up * 1.2f).normalized;
-        rb.velocity = Vector3.zero;
-        rb.AddForce(vaultDirection * vaultForce, ForceMode.Impulse);
+            Vector3 vaultDirection = (transform.forward * 0.5f + Vector3.up * 1.2f).normalized;
+            rb.velocity = Vector3.zero;
+            rb.AddForce(vaultDirection * vaultForce, ForceMode.Impulse);
 
-        isGrounded = false;
+            isGrounded = false;
 
-        StartCoroutine(SimulatePoleRotation());
+            StartCoroutine(SimulatePoleRotation());
+        }
+        catch
+        {
+            Debug.LogWarning("Vault failed.");
+        }
     }
 
     private IEnumerator SimulatePoleRotation()
@@ -170,8 +219,7 @@ public class PlayerMovement : MonoBehaviour
             yield return null;
         }
 
-        loc = new Vector3(0.27f, 0.52f, -1.28f); // Pole coordinates
-
+        loc = new Vector3(0.27f, 0.52f, -1.28f);
         vaultPole.localPosition = loc;
         vaultPole.localRotation = Quaternion.identity;
     }
@@ -183,18 +231,10 @@ public class PlayerMovement : MonoBehaviour
         canVault = true;
     }
 
-    private void CheckGrounded()
-    {
-        Ray ray = new Ray(transform.position + Vector3.up * 0.1f, Vector3.down);
-        isGrounded = Physics.Raycast(ray, 0.6f);
-
-        Debug.DrawRay(ray.origin, ray.direction * 0.2f, isGrounded ? Color.green : Color.red); //debug ray
-    }
-
     private void UpdateCameraRotation()
     {
-        yaw += lookInput.x;
-        pitch -= lookInput.y;
+        yaw += lookInput.x * lookSensitivity;
+        pitch -= lookInput.y * lookSensitivity;
         pitch = Mathf.Clamp(pitch, minPitch, maxPitch);
     }
 
@@ -208,4 +248,3 @@ public class PlayerMovement : MonoBehaviour
         cameraTransform.LookAt(targetPosition);
     }
 }
-
