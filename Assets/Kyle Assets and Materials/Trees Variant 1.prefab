@@ -52,6 +52,10 @@ PrefabInstance:
       propertyPath: m_Name
       value: Trees Variant 1
       objectReference: {fileID: 0}
+    - target: {fileID: 3319202387521747797, guid: 28968ee19ec828245985a32f3df49068, type: 3}
+      propertyPath: m_TagString
+      value: Ground
+      objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []

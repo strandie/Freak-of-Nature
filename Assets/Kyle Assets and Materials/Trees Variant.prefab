@@ -1270,6 +1270,10 @@ PrefabInstance:
       propertyPath: m_Name
       value: Trees Variant
       objectReference: {fileID: 0}
+    - target: {fileID: 182406, guid: a1d34f7914a1d8148a0ce7262f7ba394, type: 3}
+      propertyPath: m_TagString
+      value: Ground
+      objectReference: {fileID: 0}
     - target: {fileID: 421498, guid: a1d34f7914a1d8148a0ce7262f7ba394, type: 3}
       propertyPath: m_LocalScale.x
       value: 2.3587909
@@ -1442,13 +1446,34 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: 421498, guid: a1d34f7914a1d8148a0ce7262f7ba394, type: 3}
       insertIndex: -1
       addedObject: {fileID: 9041257299442579775}
-    m_AddedComponents: []
+    m_AddedComponents:
+    - targetCorrespondingSourceObject: {fileID: 182406, guid: a1d34f7914a1d8148a0ce7262f7ba394, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 3625105563213951773}
   m_SourcePrefab: {fileID: 100100000, guid: a1d34f7914a1d8148a0ce7262f7ba394, type: 3}
 --- !u!4 &3319202387521445289 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: 421498, guid: a1d34f7914a1d8148a0ce7262f7ba394, type: 3}
   m_PrefabInstance: {fileID: 3319202387521860563}
   m_PrefabAsset: {fileID: 0}
+--- !u!1 &3319202387521747797 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 182406, guid: a1d34f7914a1d8148a0ce7262f7ba394, type: 3}
+  m_PrefabInstance: {fileID: 3319202387521860563}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &3625105563213951773
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3319202387521747797}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: dac1eab65b108e34387d651a417e4985, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  tagToApply: Ground
 --- !u!1001 &3381899752836150798
 PrefabInstance:
   m_ObjectHideFlags: 0
